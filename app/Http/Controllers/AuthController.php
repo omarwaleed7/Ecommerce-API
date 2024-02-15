@@ -15,10 +15,10 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(),[
             'name' => 'required|string',
-            'email'=>'required|string|unique:users',
+            'email'=>'required|email|unique:users',
             'password'=>'required|string|confirmed',
-            'profile_picture'=>'image|mimes:jpeg,png,jpg|max:5120',
-            'phone'=>'regex:/^[0-9]{10,}$/'
+            'profile_picture'=>'nullable|image|mimes:jpeg,png,jpg|max:5120',
+            'phone' => 'nullable|regex:/^\+?\d{1,3}?\s?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/',
         ]);
 
         if ($validator->fails()) {
