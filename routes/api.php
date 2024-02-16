@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Route;
 // Authentication routes
 
 Route::prefix('auth')->controller(AuthController::class)->group(function () {
+
     // User registration
     Route::post('register','register')->name('auth.register');
 
@@ -46,25 +47,25 @@ Route::prefix('auth')->controller(AuthController::class)->group(function () {
 
 // Products routes
 
-Route::prefix('categories')->controller(CategoryController::class)->group(function(){
+Route::prefix('products')->controller(ProductController::class)->group(function(){
 
-    // Fetch all categories
-    Route::get('/', 'index')->name('categories.index');
+    // Fetch all products
+    Route::get('/', 'index')->name('products.index');
 
-    // Fetch details of a specific category by ID
-    Route::get('{id}', 'show')->name('categories.show');
+    // Fetch details of a specific product by ID
+    Route::get('{id}', 'show')->name('products.show');
 
-    // Create a new category
-    Route::post('/', 'store')->middleware('auth:sanctum')->name('categories.store');
+    // Create a new product
+    Route::post('/', 'store')->middleware('auth:sanctum')->name('products.store');
 
-    // Update a category by ID
-    Route::put('{id}', 'update')->middleware(['auth:api','owner'])->name('categories.update');
+    // Update a product by ID
+    Route::put('{id}', 'update')->middleware(['auth:api','owner'])->name('products.update');
 
-    // Delete a category by ID
-    Route::delete('{id}', 'destroy')->middleware(['auth:api','owner'])->name('categories.destroy');
+    // Delete a product by ID
+    Route::delete('{id}', 'destroy')->middleware(['auth:api','owner'])->name('products.destroy');
 });
 
-// Products routes
+// Categories routes
 
 Route::prefix('categories')->controller(CategoryController::class)->group(function(){
 
