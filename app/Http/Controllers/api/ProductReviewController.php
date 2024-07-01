@@ -7,15 +7,8 @@ use App\Contracts\BaseServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\api\ProductReviewRequests\StoreProductReviewRequest;
 use App\Models\ProductReview;
-use App\Repositories\BaseRepository;
-use App\Repositories\CategoryRepository;
-use App\Repositories\ProductReviewRepository;
-use App\Services\BaseService;
-use App\Traits\ApiResponseTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 
 
 class ProductReviewController extends Controller
