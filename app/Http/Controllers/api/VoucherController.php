@@ -5,7 +5,7 @@ namespace App\Http\Controllers\api;
 use App\Contracts\BaseRepositoryInterface;
 use App\Contracts\BaseServiceInterface;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\api\VoucherRequests\VoucherRequest;
+use App\Http\Requests\api\VoucherRequests\StoreVoucherRequest;
 use Illuminate\Http\JsonResponse;
 
 class VoucherController extends Controller
@@ -61,10 +61,10 @@ class VoucherController extends Controller
     /**
      * Store a newly created voucher.
      *
-     * @param VoucherRequest $request
+     * @param StoreVoucherRequest $request
      * @return JsonResponse
      */
-    public function store(VoucherRequest $request): JsonResponse
+    public function store(StoreVoucherRequest $request): JsonResponse
     {
         $successMessage = 'Category created successfully';
 
@@ -82,11 +82,11 @@ class VoucherController extends Controller
     /**
      * Update the specified voucher.
      *
-     * @param VoucherRequest $request
+     * @param StoreVoucherRequest $request
      * @param int $id
      * @return JsonResponse
      */
-    public function update(VoucherRequest $request,int $id): JsonResponse
+    public function update(StoreVoucherRequest $request, int $id): JsonResponse
     {
         $failureMessage = 'Voucher not found';
         $successMessage = 'Voucher updated successfully';
