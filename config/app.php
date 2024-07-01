@@ -169,7 +169,7 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         Laravel\Socialite\SocialiteServiceProvider::class,
-        \App\Providers\BaseServiceProvider::class,
+        \App\Providers\BaseServiceServiceProvider::class,
         \App\Providers\BaseRepositoryServiceProvider::class,
         PayMob\PayMobServiceProvider::class,
     ])->toArray(),
