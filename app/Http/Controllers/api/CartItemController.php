@@ -112,18 +112,4 @@ class CartItemController extends Controller
 
         return $this->baseService->apiResponse(null, $successMessage, 200);
     }
-
-    /**
-     * Increase the quantity of a specific cart item
-     *
-     * @param int $id
-     * @return JsonResponse
-     */
-    public function increment(int $id): JsonResponse
-    {
-        $failureMessage = 'Cart item quantity not found';
-        $successMessage = 'Cart item quantity incremented successfully';
-
-        return $this->cartItemRepository->increment($id,$failureMessage,$successMessage);
-    }
 }
