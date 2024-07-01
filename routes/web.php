@@ -18,5 +18,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('login/google', [UserController::class, 'redirectToGoogle']);
-Route::get('login/google/callback', [UserController::class, 'handleGoogleCallback']);
+// Google login
+Route::controller(UserController::class)->group(function () {
+    // Redirect to Google for authentication
+    Route::get('login/google', 'redirectToGoogle')->name('login.google');
+
+    // Google callback
+    Route::get('login/google/callback', 'handleGoogleCallback');
+});
