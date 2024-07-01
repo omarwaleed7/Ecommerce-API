@@ -2,19 +2,36 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\BaseService;
 use Closure;
-use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 class OwnerMiddleware
 {
+    protected $baseService;
+    public function __construct(BaseService $baseService)
+    {
+        $this->baseService = $baseService;
+    }
+
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @param  string  $model
+     * @param  string  $param
+     * @return mixed
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle($request, Closure $next, $model, $param = 'id')
     {
+        $user = auth()->user();
+        $resourceId = $request->route($param);
+        $resource = app($model)->find($resourceId);
+
+        if (!$resource || $resource->user_id != $user->id) {
+            return $this->baseService->apiResponse(null, 'Unauthorized', 401);
+        }
+
         return $next($request);
     }
 }
