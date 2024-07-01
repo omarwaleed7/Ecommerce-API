@@ -1,13 +1,19 @@
 <?php
 
-use App\Http\Controllers\api\CartController;
+use App\Http\Controllers\api\AuthController;
+use App\Http\Controllers\api\CartItemController;
 use App\Http\Controllers\api\CategoryController;
+use App\Http\Controllers\Api\FilterAndSortController;
+use App\Http\Controllers\api\FilterController;
 use App\Http\Controllers\api\OrderController;
 use App\Http\Controllers\api\ProductController;
 use App\Http\Controllers\api\ProductReviewController;
+use App\Http\Controllers\api\SearchController;
+use App\Http\Controllers\api\SortController;
+use App\Http\Controllers\api\UserController;
 use App\Http\Controllers\api\VoucherController;
-use App\Http\Controllers\api\WishlistController;
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\api\WishlistItemController;
+use App\Http\Controllers\api\PaymentController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -26,19 +32,19 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->controller(AuthController::class)->group(function () {
 
     // User registration
-    Route::post('register','register')->name('auth.register');
+    Route::post('register', 'register')->name('auth.register');
 
     // User login
-    Route::post('login','login')->name('auth.login');
+    Route::post('login', 'login')->name('auth.login');
 
     // Routes below are protected by the 'sanctum' middleware
-    Route::middleware('auth:sanctum')->group(function() {
+    Route::middleware('auth:sanctum')->group(function () {
 
         // Fetch authenticated user details
         Route::get('user', 'user')->name('auth.user');
 
         // Refresh authentication token
-        Route::post('refresh','refresh')->name('auth.refresh');
+        Route::post('refresh', 'refresh')->name('auth.refresh');
 
         // User logout
         Route::post('logout', 'logout')->name('auth.logout');
@@ -47,7 +53,7 @@ Route::prefix('auth')->controller(AuthController::class)->group(function () {
 
 // Products routes
 
-Route::prefix('products')->controller(ProductController::class)->group(function(){
+Route::prefix('products')->controller(ProductController::class)->group(function () {
 
     // Fetch all products
     Route::get('/', 'index')->name('products.index');
@@ -56,117 +62,177 @@ Route::prefix('products')->controller(ProductController::class)->group(function(
     Route::get('{id}', 'show')->name('products.show');
 
     // Create a new product
-    Route::post('/', 'store')->middleware('auth:sanctum')->name('products.store');
+    Route::post('/', 'store')->middleware(['auth:sanctum', 'check_admin'])->name('products.store');
 
     // Update a product by ID
-    Route::put('{id}', 'update')->middleware(['auth:api','owner'])->name('products.update');
+    Route::patch('{id}', 'update')->middleware(['auth:sanctum', 'check_admin'])->name('products.update');
 
     // Delete a product by ID
-    Route::delete('{id}', 'destroy')->middleware(['auth:api','owner'])->name('products.destroy');
+    Route::delete('{id}', 'destroy')->middleware(['auth:sanctum', 'check_admin'])->name('products.destroy');
 });
 
 // Categories routes
 
-Route::prefix('categories')->controller(CategoryController::class)->group(function(){
+Route::prefix('categories')->controller(CategoryController::class)->group(function () {
 
     // Fetch all categories
-    Route::get('','index')->name('categories.index');
+    Route::get('', 'index')->name('categories.index');
 
     // Fetch details of a specific category by ID
-    Route::get('{id}','show')->name('categories.show');
+    Route::get('{id}', 'show')->name('categories.show');
 
     // Create a new category
-    Route::post('/','store')->middleware('auth:sanctum')->name('categories.store');
+    Route::post('/', 'store')->middleware(['auth:sanctum', 'check_admin'])->name('categories.store');
 
     // Update a category by ID
-    Route::patch('{id}','update')->middleware(['auth:api','owner'])->name('categories.update');
+    Route::patch('{id}', 'update')->middleware(['auth:sanctum', 'check_admin'])->name('categories.update');
 
     // Delete a category by ID
-    Route::delete('{id}','destroy')->middleware(['auth:api','owner'])->name('categories.destroy');
+    Route::delete('{id}', 'destroy')->middleware(['auth:sanctum', 'check_admin'])->name('categories.destroy');
 });
 
 
 // Vouchers routes
 
-Route::prefix('vouchers')->controller(VoucherController::class)->group(function(){
+Route::prefix('vouchers')->controller(VoucherController::class)->group(function () {
 
     // Fetch all vouchers
-    Route::get('/','index')->name('vouchers.index');
+    Route::get('/', 'index')->name('vouchers.index');
 
     // Fetch details of a specific voucher by ID
-    Route::get('{id}','show')->name('vouchers.show');
+    Route::get('{id}', 'show')->name('vouchers.show');
 
     // Create a new voucher
-    Route::post('/','store')->middleware('auth:sanctum')->name('vouchers.store');
+    Route::post('/', 'store')->middleware(['auth:sanctum', 'check_admin'])->name('vouchers.store');
 
     // Update a voucher by ID
-    Route::patch('{id}','update')->middleware(['auth:api','owner'])->name('voucher.update');
+    Route::patch('{id}', 'update')->middleware(['auth:sanctum', 'check_admin'])->name('voucher.update');
 
     // Delete a voucher by ID
-    Route::delete('{id}','destroy')->middleware(['auth:api','owner'])->name('vouchers.destroy');
+    Route::delete('{id}', 'destroy')->middleware(['auth:sanctum', 'check_admin'])->name('vouchers.destroy');
 });
 
 
-// Wishlist routes
+// WishlistItem routes
 
-Route::prefix('wishlist')->middleware('auth:sanctum')->controller(WishlistController::class)->group(function(){
+Route::prefix('wishlistitems')->middleware('auth:sanctum')->controller(WishlistItemController::class)->group(function () {
 
     // Show wishlist
-    Route::get('/','index')->name('wishlist.index');
+    Route::get('/', 'index')->name('wishlist.index');
+
+    // Fetch details of a specific wishlist item by ID
+    Route::get('{id}', 'show')->name('wishlist.show');
 
     // Create a new item in wishlist
-    Route::post('/','store')->name('wishlist.store');
+    Route::post('/', 'store')->name('wishlist.store');
 
     // Delete a item in wishlist by ID
-    Route::delete('{id}','destroy')->middleware('owner')->name('wishlist.delete');
+    Route::delete('{id}', 'destroy')->middleware('check_ownership:App\\Models\\WishlistItem,id')->name('wishlist.delete');
 });
-
 
 // Product reviews routes
 
-Route::prefix('productreviews')->controller(ProductReviewController::class)->group(function(){
+Route::prefix('productreviews')->controller(ProductReviewController::class)->group(function () {
+
+    // Fetch all product reviews for a specific product
+    Route::get('product/{product_id}', 'index')->name('productreviews.index');
 
     // Fetch details of a specific product review by ID
-    Route::get('{id}','show')->name('productreview.show');
+    Route::get('review/{id}', 'show')->name('productreviews.show');
 
     // Create a new product review
-    Route::post('/','store')->name('productreviews.store');
+    Route::post('/', 'store')->middleware('auth:sanctum')->name('productreviews.store');
 
     // Update a product review by ID
-    Route::patch('{id}','update')->middleware(['auth:sanctum','owner'])->name('productreview.update');
+    Route::patch('review/{id}', 'update')->middleware(['auth:sanctum', 'check_ownership:App\\Models\\ProductReview,id'])->name('productreviews.update');
 
     // Delete a product review by ID
-    Route::delete('{id}','destroy')->middleware(['auth:sanctum','owner'])->name('productreview.destroy');
+    Route::delete('review/{id}', 'destroy')->middleware(['auth:sanctum', 'check_ownership:App\\Models\\ProductReview,id'])->name('productreviews.destroy');
 });
 
-// Cart routes
 
-Route::prefix('cart')->middleware('auth:sanctum')->controller(CartController::class)->group(function(){
+// CartItem routes
 
-    // Show a specific cart item by ID
-    Route::get('{id}','show')->name('cart.show');
+Route::prefix('cart')->middleware('auth:sanctum')->controller(CartItemController::class)->group(function () {
 
     // Fetch all cart items
-    Route::get('/','index')->name('cart.index');
+    Route::get('/', 'index')->name('cart.index');
+
+    // Show a specific cart item by ID
+    Route::get('{id}', 'show')->name('cart.show');
 
     // Create a new cart item
-    Route::post('/','store')->name('cart.store');
+    Route::post('/', 'store')->name('cart.store');
 
     // Delete a specific cart item by ID
-    Route::delete('{id}','destroy')->middleware('owner')->name('cart.destroy');
+    Route::delete('{id}', 'destroy')->middleware('check_ownership:App\\Models\\CartItem,id')->name('carts.destroy');
 });
 
 
 // Order routes
 
-Route::prefix('order')->middleware('auth:sanctum')->controller(OrderController::class)->group(function(){
+Route::prefix('orders')->middleware('auth:sanctum')->controller(OrderController::class)->group(function () {
+
+    // Fetch all orders
+    Route::get('/', 'index')->name('orders.index');
 
     // Show an order
-    Route::get('/','show')->name('order.show');
+    Route::get('{id}', 'show')->name('orders.show');
 
     // Create a new order
-    Route::post('/','store')->name('order.create');
+    Route::post('/', 'store')->name('orders.create');
+});
 
-    // Delete an order by ID
-    Route::delete('{id}','destroy')->middleware('owner')->name('order.destroy');
+// Filter routes
+Route::prefix('filter')->controller(FilterController::class)->group(function () {
+    // Filter products by price
+    Route::post('price','filterByPrice')->name('filter.price');
+
+    // Filter products by category
+    Route::get('category/{id}','filterByCategory')->name('filter.category');
+});
+
+// Sort routes
+Route::prefix('sort')->controller(SortController::class)->group(function () {
+
+    // Sort products by name
+    Route::get('name','sortByName')->name('sort.category');
+
+    // Sort products by price
+    Route::get('price','sortByPrice')->name('sort.price');
+
+    // Sort products by price in descending order
+    Route::get('price_desc','sortByPriceDesc')->name('sort.price_desc');
+
+    // Sort products by date
+    Route::get('date','sortByDate')->name('sort.date');
+
+    // Sort products by date in descending order
+    Route::get('date_desc','sortByDateDesc')->name('sort.date_desc');
+
+    // Sort products by popularity
+    Route::get('popularity','sortByPopularity')->name('sort.popularity');
+});
+
+// Search routes
+Route::prefix('search')->controller(SearchController::class)->group(function () {
+
+    // Search products by name
+    Route::post('','search')->name('search.search_query');
+});
+
+// Filter and Sort routes
+Route::prefix('filterandsort')->controller(FilterAndSortController::class)->group(function () {
+    // Filter and sort products
+    Route::post('/','filterAndSort')->name('filterandsort.index');
+});
+
+// User profile routes
+Route::prefix('profile')->middleware('auth:sanctum')->controller(UserController::class)->group(function () {
+
+    // Update user profile
+    Route::patch('/', 'updateProfile')->name('profile.update');
+
+    // Delete user profile
+    Route::post('/', 'deleteProfile')->name('profile.delete');
 });
