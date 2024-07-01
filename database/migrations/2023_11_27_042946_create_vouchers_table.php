@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('vouchers', function (Blueprint $table) {
             $table->id();
-            $table->string('name',10);
-            $table->unsignedTinyInteger('value');
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->string('name',50)->unique();
+            $table->unsignedSmallInteger('value');
+            $table->foreignId('user_id')->constrained('users');
             $table->timestamps();
         });
     }
