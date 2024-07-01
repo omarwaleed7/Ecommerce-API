@@ -1,84 +1,128 @@
 <?php
 
 namespace App\Http\Controllers\api;
+use App\Contracts\BaseRepositoryInterface;
+use App\Contracts\BaseServiceInterface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\api\CategoryRequests\CategoryRequest;
 use App\Models\Category;
-use App\Traits\ApiResponseTrait;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\JsonResponse;
+
 
 class CategoryController extends Controller
 {
-    use ApiResponseTrait;
-    public function store(Request $request){
-        $validator = Validator::make($request->all(),[
-            'name'=>'required|string',
-        ]);
+    protected BaseServiceInterface $baseService;
+    protected BaseRepositoryInterface $baseRepository;
 
-        if ($validator->fails()) {
-            return $this->apiResponse(null, $validator->errors(), 422);
-        }
-
-        $category = Category::create([
-            'name'=>$request->name,
-            'admin_id'=>auth()->user()->id
-        ]);
-
-        return $this->apiResponse($category,'Category created successfully',201);
+    public function __construct(
+        BaseServiceInterface $baseService,
+        BaseRepositoryInterface $baseRepository
+    ) {
+        $this->baseService = $baseService;
+        $this->baseRepository=$baseRepository;
     }
 
-    public function index(){
-        $categories = Category::all();
+    /**
+     * Get all categories.
+     *
+     * @return JsonResponse
+     */
+    public function index(): JsonResponse
+    {
+        $failureMessage = 'Categories not found';
+        $successMessage = 'Categories retrieved successfully';
 
-        if($categories->isEmpty()){
-            return $this->apiResponse(null,'Categories not found',404);
+        $data = $this->baseRepository->getAllPaginated('App\Models\Category', 100);
+
+        if ($data == null) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
         }
 
-        return $this->apiResponse($categories,'Categories retrieved successfully',200);
+        return $this->baseService->apiResponse($data, $successMessage, 200);
     }
 
-    public function show($id){
-        $category = Category::find($id);
+    /**
+     * Get a category instance.
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function show(int $id): JsonResponse
+    {
+        $failureMessage = 'Category not found';
+        $successMessage = 'Category retrieved successfully';
 
-        if($category === null){
-            return $this->apiResponse(null,'Category not found',404);
+        $data = $this->baseRepository->get('App\Models\Category',$id);
+
+        if ($data == null) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
         }
 
-        return $this->apiResponse($category,'Category retrieved successfully',200);
+        return $this->baseService->apiResponse($data,$successMessage,200);
     }
-    public function update(Request $request){
-        $category = Category::find($request->id);
 
-        if($category === null){
-            return $this->apiResponse(null,'Category not found',404);
-        }
+    /**
+     * Store a newly created category.
+     *
+     * @param CategoryRequest $request
+     * @return JsonResponse
+     */
+    public function store(CategoryRequest $request): JsonResponse
+    {
+        $successMessage = 'Category created successfully';
 
-        $validator = Validator::make($request->all(),[
-            'name'=>'required|string',
-        ]);
+        $category = [
+            'name' => $request->input('name'),
+            'user_id' => auth()->user()->getAuthIdentifier(),
+        ];
 
-        if ($validator->fails()) {
-            return $this->apiResponse(null, $validator->errors(), 422);
-        }
+        $data = $this->baseRepository->create('App\Models\Category',$category);
 
-        $category->update([
-            'name'=>$request->name,
-            'admin_id'=>auth()->user()->id
-        ]);
-
-        $updated_category = Category::find($request->id);
-
-        return $this->apiResponse($updated_category,'Category updated successfully',200);
+        return $this->baseService->apiResponse($data,$successMessage,201);
     }
-    public function delete(Request $request){
-        $category = Category::find($request->id);
 
-        if($category === null){
-            return $this->apiResponse(null,'Category not found',404);
+    /**
+     * Update the specified category.
+     *
+     * @param CategoryRequest $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function update(CategoryRequest $request, int $id): JsonResponse
+    {
+        $failureMessage = 'Category not found';
+        $successMessage = 'Category updated successfully';
+
+        $category = [
+            'name' => $request->input('name'),
+        ];
+
+        $data = $this->baseRepository->update($id,'App\Models\Category',$category);
+
+        if ($data == null) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
         }
 
-        $category->delete();
+        return $this->baseService->apiResponse($data,$successMessage,200);
+    }
 
-        return $this->apiResponse(null,'Category deleted successfully',200);
+    /**
+     * Remove the specified category.
+     *
+     * @param  int  $id
+     * @return JsonResponse
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $failureMessage = 'Category not found';
+        $successMessage = 'Category deleted successfully';
+
+        $deleteCategory = $this->baseRepository->delete('App\Models\Category',$id);
+
+        if (!$deleteCategory) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
+        }
+
+        return $this->baseService->apiResponse(null, $successMessage, 200);
     }
 }

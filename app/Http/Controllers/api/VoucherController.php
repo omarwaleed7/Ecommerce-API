@@ -2,87 +2,126 @@
 
 namespace App\Http\Controllers\api;
 
+use App\Contracts\BaseRepositoryInterface;
+use App\Contracts\BaseServiceInterface;
 use App\Http\Controllers\Controller;
-use App\Models\Voucher;
-use App\Traits\ApiResponseTrait;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use App\Http\Requests\api\VoucherRequests\VoucherRequest;
+use Illuminate\Http\JsonResponse;
 
 class VoucherController extends Controller
 {
-    use ApiResponseTrait;
-    public function store(Request $request){
-        $validator = Validator::make($request->all(),[
-            'name'=>'required|string',
-            'value'=>'required|numeric|between:0,100',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->apiResponse(null, $validator->errors(), 422);
-        }
-
-        $voucher = Voucher::create([
-            'name'=>$request->name,
-            'value'=>$request->value,
-            'admin_id'=>auth()->user()->id
-        ]);
-
-        return $this->apiResponse($voucher,'Voucher created successfully',201);
+    protected BaseServiceInterface $baseService;
+    protected BaseRepositoryInterface $baseRepository;
+    public function __construct(
+        BaseServiceInterface $baseService,
+        BaseRepositoryInterface $baseRepository
+    ) {
+        $this->baseService=$baseService;
+        $this->baseRepository=$baseRepository;
     }
 
-    public function index(){
-        $vouchers = Voucher::all();
+    /**
+     * Get all vouchers.
+     *
+     * @return JsonResponse
+     */
+    public function index(): JsonResponse
+    {
+        $failureMessage = 'Vouchers not found';
+        $successMessage = 'Vouchers retrieved successfully';
 
-        if($vouchers->isEmpty()){
-            return $this->apiResponse(null,'Vouchers not found',404);
+        $data = $this->baseRepository->getAllPaginated('App\Models\Voucher', 100);
+
+        if ($data == null) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
         }
 
-        return $this->apiResponse($vouchers,'Vouchers retrieved successfully',200);
+        return $this->baseService->apiResponse($data, $successMessage, 200);    }
+
+    /**
+     * Get a voucher instance.
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function show(int $id): JsonResponse
+    {
+        $failureMessage = 'Voucher not found';
+        $successMessage = 'Voucher retrieved successfully';
+
+        $data = $this->baseRepository->get('App\Models\Voucher',$id);
+
+        if ($data == null) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
+        }
+
+        return $this->baseService->apiResponse($data,$successMessage,200);
     }
 
-    public function show($id){
-        $voucher = Voucher::find($id);
+    /**
+     * Store a newly created voucher.
+     *
+     * @param VoucherRequest $request
+     * @return JsonResponse
+     */
+    public function store(VoucherRequest $request): JsonResponse
+    {
+        $successMessage = 'Category created successfully';
 
-        if($voucher === null){
-            return $this->apiResponse(null,'Voucher not found',404);
-        }
+        $voucher = [
+            'name'=>$request->input('name'),
+            'value'=>$request->input('value'),
+            'user_id'=>auth()->user()->getAuthIdentifier()
+        ];
 
-        return $this->apiResponse($voucher,'Voucher retrieved successfully',200);
+        $data = $this->baseRepository->create('App\Models\Voucher',$voucher);
+
+        return $this->baseService->apiResponse($data,$successMessage,201);
     }
-    public function update(Request $request){
-        $voucher = Voucher::find($request->id);
-        if($voucher === null){
-            return $this->apiResponse(null,'Voucher not found',404);
+
+    /**
+     * Update the specified voucher.
+     *
+     * @param VoucherRequest $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function update(VoucherRequest $request,int $id): JsonResponse
+    {
+        $failureMessage = 'Voucher not found';
+        $successMessage = 'Voucher updated successfully';
+
+        $voucher = [
+            'name'=>$request->input('name'),
+            'value'=>$request->input('value'),
+        ];
+
+        $data = $this->baseRepository->update($id,'App\Models\Voucher',$voucher);
+
+        if ($data == null) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
         }
 
-        $validator = Validator::make($request->all(),[
-            'name'=>'required|string',
-            'value'=>'required|numeric|between:1,100',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->apiResponse(null, $validator->errors(), 422);
-        }
-
-        $voucher->update([
-            'name'=>$request->name,
-            'value'=>$request->value,
-            'admin_id'=>auth()->user()->id
-        ]);
-
-        $updated_voucher = Voucher::find($request->id);
-
-        return $this->apiResponse($updated_voucher,'Voucher updated successfully',200);
+        return $this->baseService->apiResponse($data,$successMessage,200);
     }
-    public function delete(Request $request){
-        $voucher = Voucher::find($request->id);
 
-        if($voucher === null){
-            return $this->apiResponse(null,'Voucher not found',404);
+    /**
+     * Remove the specified voucher.
+     *
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function destroy(string $id): JsonResponse
+    {
+        $failureMessage = 'Voucher not found';
+        $successMessage = 'Voucher deleted successfully';
+
+        $deleteVoucher = $this->baseRepository->delete('App\Models\Voucher',$id);
+
+        if (!$deleteVoucher) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
         }
 
-        $voucher->delete();
-
-        return $this->apiResponse(null,'Voucher deleted successfully',200);
+        return $this->baseService->apiResponse(null, $successMessage, 200);
     }
 }

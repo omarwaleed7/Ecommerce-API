@@ -2,91 +2,140 @@
 
 namespace App\Http\Controllers\api;
 
+use App\Contracts\BaseRepositoryInterface;
+use App\Contracts\BaseServiceInterface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\api\ProductReviewRequests\StoreProductReviewRequest;
 use App\Models\ProductReview;
+use App\Repositories\BaseRepository;
+use App\Repositories\CategoryRepository;
+use App\Repositories\ProductReviewRepository;
+use App\Services\BaseService;
 use App\Traits\ApiResponseTrait;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 
 class ProductReviewController extends Controller
 {
-    use ApiResponseTrait;
+    protected BaseServiceInterface $baseService;
+    protected BaseRepositoryInterface $baseRepository;
 
-    public function store(Request $request){
-        $validator = Validator::make($request->all(),[
-            'content'=>'required|string',
-            'rate' => 'required|integer|between:1,5',
-            'product_id'=>'required|exists:products'
-        ]);
-
-        if ($validator->fails()) {
-            return $this->apiResponse(null, $validator->errors(), 422);
-        }
-
-        $product_reviews = ProductReview::create([
-            'content'=>$request->feedback,
-            'rate'=>$request->rate,
-            'user_id'=>auth()->user()->id,
-            'product_id'=>$request->product_id
-        ]);
-
-        return $this->apiResponse($product_reviews,'Product Review created successfully',201);
+    public function __construct(BaseServiceInterface $baseService, BaseRepositoryInterface $baseRepository)
+    {
+        $this->baseService = $baseService;
+        $this->baseRepository = $baseRepository;
     }
 
-    public function index(){
-        $product_reviews = ProductReview::all();
+    /**
+     * Get all product reviews for a specific product.
+     *
+     * @param int $product_id
+     * @return JsonResponse
+     */
+    public function index(int $product_id): JsonResponse
+    {
+        $failureMessage = 'Product reviews not found';
+        $successMessage = 'Product reviews retrieved successfully';
 
-        if($product_reviews->isEmpty()){
-            return $this->apiResponse(null,'Product Reviews not found',404);
+        // Query ProductReview where product_id matches the given $product_id
+        $productReviews = ProductReview::where('product_id', $product_id)->get();
+
+        if ($productReviews->isEmpty()) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
         }
 
-        return $this->apiResponse($product_reviews,'Product Reviews retrieved successfully',200);
+        return $this->baseService->apiResponse($productReviews, $successMessage, 200);
     }
 
-    public function show($id){
-        $product_review = ProductReview::find($id);
 
-        if($product_review === null){
-            return $this->apiResponse(null,'Product Review not found',404);
+    /**
+     * Get a product review instance.
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function show(int $id): JsonResponse
+    {
+        $failureMessage = 'Product review not found';
+        $successMessage = 'Product review retrieved successfully';
+
+        $data = $this->baseRepository->get('App\Models\ProductReview',$id);
+
+        if ($data == null) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
         }
 
-        return $this->apiResponse($product_review,'Product Review retrieved successfully',200);
+        return $this->baseService->apiResponse($data,$successMessage,200);
     }
-    public function update(Request $request){
-        $product_review = ProductReview::find($request->id);
 
-        if($product_review === null){
-            return $this->apiResponse(null,'Product Review not found',404);
-        }
+    /**
+     * Store a newly created product review.
+     *
+     * @param StoreProductReviewRequest $request
+     * @return JsonResponse
+     */
+    public function store(StoreProductReviewRequest $request): JsonResponse
+    {
+        $successMessage = 'Product review created successfully';
 
-        $validator = Validator::make($request->all(),[
-            'content'=>'required|string',
-            'rate' => 'required|integer|between:1,5',
-        ]);
+        $productReview = [
+            'user_id' => auth()->user()->getAuthIdentifier(),
+            'product_id' => $request->input('product_id'),
+            'feedback' => $request->input('feedback'),
+            'rate' => $request->input('rate'),
+        ];
 
-        if ($validator->fails()) {
-            return $this->apiResponse(null, $validator->errors(), 422);
-        }
+        $data = $this->baseRepository->create('App\Models\ProductReview', $productReview);
 
-        $product_review->update([
-            'content'=>$request->feedback,
-            'rate'=>$request->rate
-        ]);
-
-        $updated_product_review = ProductReview::find($request->id);
-
-        return $this->apiResponse($updated_product_review,'Product Review updated successfully',200);
+        return $this->baseService->apiResponse($data,$successMessage,201);
     }
-    public function delete(Request $request){
-        $product_review = ProductReview::find($request->id);
 
-        if($product_review === null){
-            return $this->apiResponse(null,'Product Review not found',404);
+    /**
+     * Update the specified product review.
+     *
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $failureMessage = 'Product review not found';
+        $successMessage = 'Product review updated successfully';
+
+        $productReview = [
+            'feedback' => $request->input('feedback'),
+            'rate' => $request->input('rate'),
+        ];
+
+        $data = $this->baseRepository->update($id, 'App\Models\ProductReview', $productReview);
+
+        if ($data == null) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
         }
 
-        $product_review->delete();
+        return $this->baseService->apiResponse($data,$successMessage,200);
+    }
 
-        return $this->apiResponse(null,'Product Review deleted successfully');
+    /**
+     * Remove the specified product review.
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $failureMessage = 'Product review not found';
+        $successMessage = 'Product review deleted successfully';
+
+        $deletedProductReview = $this->baseRepository->delete('App\Models\ProductReview', $id);
+
+        if (!$deletedProductReview) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
+        }
+
+        return $this->baseService->apiResponse(null,$successMessage,200);
     }
 }

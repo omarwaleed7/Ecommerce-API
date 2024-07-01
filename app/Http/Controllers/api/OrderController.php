@@ -2,57 +2,117 @@
 
 namespace App\Http\Controllers\api;
 
+use App\Contracts\BaseRepositoryInterface;
+use App\Contracts\BaseServiceInterface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\api\OrderRequests\StoreOrderRequest;
+use App\Models\CartItem;
 use App\Models\Order;
-use App\Traits\ApiResponseTrait;
+use App\Models\Voucher;
+use App\Repositories\OrderItemRepository;
+use App\Services\BaseService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class OrderController extends Controller
 {
-    use ApiResponseTrait;
-    public function store(Request $request){
-        $validator = Validator::make($request->all(),[
-            'name'=>'required|string',
-            'price'=>'required|numeric',
-            'description'=>'required|string',
-            'user_id'=>'required|exists:users'
-        ]);
+    protected BaseServiceInterface $baseService;
 
-        if ($validator->fails()) {
-            return $this->apiResponse(null, $validator->errors(), 422);
-        }
+    protected BaseRepositoryInterface $baseRepository;
 
-        $order = Order::create([
-            'name'=>$request->name,
-            'price'=>$request->price,
-            'description'=>$request->description,
-            'user_id'=>$request->user_id
-        ]);
-        return $this->apiResponse($order,'Order created successfully',201);
+    protected OrderItemRepository $orderItemRepository;
+    public function __construct(BaseServiceInterface $baseService,BaseRepositoryInterface $baseRepository,OrderItemRepository $orderItemRepository){
+        $this->baseService=$baseService;
+        $this->baseRepository=$baseRepository;
+        $this->orderItemRepository = $orderItemRepository;
     }
 
-    public function index(){
-        $orders = Order::all();
-        if($orders->isEmpty()){
-            return $this->apiResponse(null,'Orders not found',404);
+    /**
+     * Get all orders.
+     *
+     * @return JsonResponse
+     */
+    public function index(): JsonResponse
+    {
+        $failureMessage = 'Orders not found';
+        $successMessage = 'Orders retrieved successfully';
+
+        $data = $this->baseRepository->getAll('App\Models\Order');
+
+        if ($data == null) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
         }
-        return $this->apiResponse($orders,'Orders retrieved successfully',200);
+
+        return $this->baseService->apiResponse($data,$successMessage,200);
     }
 
-    public function show($id){
-        $order = Order::find($id);
-        if($order === null){
-            return $this->apiResponse(null,'Order not found',404);
+    /**
+     * Get an order instance.
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function show(int $id): JsonResponse
+    {
+        $failureMessage = 'Order not found';
+        $successMessage = 'Order retrieved successfully';
+
+        $data = $this->baseRepository->get('App\Models\Order',$id);
+
+        if ($data == null) {
+            return $this->baseService->apiResponse(null, $failureMessage, 404);
         }
-        return $this->apiResponse($order,'Order retrieved successfully',200);
+
+        return $this->baseService->apiResponse($data,$successMessage,200);
     }
-    public function delete(Request $request){
-        $order = Order::find($request->id);
-        if($order === null){
-            return $this->apiResponse(null,'Order not found',404);
+
+    /**
+     * Store a newly created order.
+     *
+     * @param StoreOrderRequest $request
+     * @return mixed
+     */
+    public function store(StoreOrderRequest $request): mixed
+    {
+        $cartItems = CartItem::where('user_id',auth()->user()->getAuthIdentifier())->get();
+
+        $totalPrice = 0;
+
+        foreach ($cartItems as $cartItem){
+            $totalPrice += $cartItem->quantity * $cartItem->price;
         }
-        $order->delete();
-        return $this->apiResponse(null,'Order deleted successfully');
+
+        if ($request->has('voucher')){
+            $voucher = Voucher::where('name', $request->input('voucher'))
+                ->select('value')
+                ->first();
+            if ($voucher) {
+                $totalPrice -= $voucher->value;
+            }
+            else {
+                return $this->baseService->apiResponse(null, 'Voucher not found', 404);
+            }
+        }
+
+        // Create order
+        $order = [
+            'total_price' => $totalPrice,
+            'user_id' => auth()->user()->getAuthIdentifier(),
+        ];
+
+        $cartItems->each->delete();
+
+        $data = $this->baseRepository->create('App\Models\Order',$order);
+
+        $order = Order::latest()->select('id')->first();
+
+        $orderID = $order->id;
+
+        $this->orderItemRepository->store($cartItems,$orderID);
+
+        $paymentKey = PaymentController::pay($orderID,$totalPrice);
+
+        return view('paymob')->with('token',$paymentKey);
     }
 }
