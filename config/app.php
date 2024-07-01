@@ -169,6 +169,9 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         Laravel\Socialite\SocialiteServiceProvider::class,
+        \App\Providers\BaseServiceProvider::class,
+        \App\Providers\BaseRepositoryServiceProvider::class,
+        PayMob\PayMobServiceProvider::class,
     ])->toArray(),
 
     /*
@@ -185,6 +188,7 @@ return [
     'aliases' => Facade::defaultAliases()->merge([
         // 'Example' => App\Facades\Example::class,
         'Socialite' => Laravel\Socialite\Facades\Socialite::class,
+        'PayMob' => PayMob\Facades\PayMob::class,
     ])->toArray(),
 
 ];
