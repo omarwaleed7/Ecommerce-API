@@ -63,14 +63,4 @@ class Product extends BaseModel
     {
         return $this->hasMany(OrderItem::class);
     }
-
-    /**
-     * Get the product additional images associated with the product.
-     *
-     * @return HasMany
-     */
-    public function productImages(): HasMany
-    {
-        return $this->hasMany(ProductAdditionalImg::class);
-    }
 }
