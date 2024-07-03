@@ -278,7 +278,6 @@ php artisan migrate
 php artisan serve
 8. **Access the API:**
 The API should now be running at `http://127.0.0.1:800`. You can explore the API endpoints and start using the Blog API.
-### Swagger Documentation
 
 ## Documentation
 
